@@ -3147,14 +3147,25 @@ class GenerationMixin:
             )
 
         # keep track of which sequences are already finished
+        input_len = input_ids.shape[1]
         batch_size, cur_len = input_ids.shape
         this_peer_finished = False
         unfinished_sequences = torch.ones(batch_size, dtype=torch.long, device=input_ids.device)
         model_kwargs = self._get_initial_cache_position(input_ids, model_kwargs)
 
+        import time
+        import datetime
+        from torch.utils.tensorboard import SummaryWriter
+        log_root_dir = "/cpfs01/user/xuhaoran/202409mla/huggingface-transformers/log/"
+        current_time = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+        writer = SummaryWriter(log_dir=log_root_dir + f"{self.model.__class__.__name__}_batch_size_{batch_size}_input_len_{input_len}_max_length_{max_length}_{current_time}", max_queue=5, flush_secs=3)
+        
+        all_start = time.time()
+        step = 0
         while self._has_unfinished_sequences(
             this_peer_finished, synced_gpus, device=input_ids.device, cur_len=cur_len, max_length=max_length
         ):
+            step_start = time.time()
             # prepare model inputs
             model_inputs = self.prepare_inputs_for_generation(input_ids, **model_kwargs)
 
@@ -3220,11 +3231,36 @@ class GenerationMixin:
             unfinished_sequences = unfinished_sequences & ~stopping_criteria(input_ids, scores)
             this_peer_finished = unfinished_sequences.max() == 0
             cur_len += 1
-
+            step += 1
             # This is needed to properly delete outputs.logits which may be very large for first iteration
             # Otherwise a reference to outputs is kept which keeps the logits alive in the next iteration
             del outputs
-
+            step_end = time.time()
+            # step_duration = round(step_end - step_start, 2)
+            step_duration = step_end - step_start
+            duration_until_now = step_end - all_start
+            kv_cache_memory_usage = model_kwargs["past_key_values"].get_kv_cache_memory_usage()
+            allocated_memory_gb = torch.cuda.memory_allocated() / (1024 ** 3)
+            reserved_memory_gb = torch.cuda.memory_reserved() / (1024 ** 3)
+            infos = {
+                "step": step,
+                "cur_len": cur_len,
+                "step_duration": step_duration, 
+                "duration_until_now": duration_until_now,
+                "tgs": batch_size / step_duration,
+                "kv_cache_memory_usage": kv_cache_memory_usage,
+                "memory_allocated": allocated_memory_gb,
+                "memory_reserved": reserved_memory_gb
+            }
+            
+            for key, value in infos.items():
+                if isinstance(value, (int, float)):
+                    writer.add_scalar(f"Metrics/{key}", value, step)
+            
+            if cur_len % 64 == 0:
+                print("cache_seq_len: ", cur_len, "time: ", duration_until_now)
+        writer.close()
+        
         if streamer is not None:
             streamer.end()
 

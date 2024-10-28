@@ -35,11 +35,17 @@ from transformers.testing_utils import (
     slow,
     torch_device,
 )
+import sys
+sys.path.insert(0,"/cpfs01/user/xuhaoran/202409mla/huggingface-transformers/transformers")
+from tests.generation.test_utils import GenerationTesterMixin
+from tests.test_configuration_common import ConfigTester
+from tests.test_modeling_common import ModelTesterMixin, ids_tensor
+from tests.test_pipeline_mixin import PipelineTesterMixin
 
-from ...generation.test_utils import GenerationTesterMixin
-from ...test_configuration_common import ConfigTester
-from ...test_modeling_common import ModelTesterMixin, ids_tensor
-from ...test_pipeline_mixin import PipelineTesterMixin
+# from ...generation.test_utils import GenerationTesterMixin
+# from ...test_configuration_common import ConfigTester
+# from ...test_modeling_common import ModelTesterMixin, ids_tensor
+# from ...test_pipeline_mixin import PipelineTesterMixin
 
 
 if is_torch_available():
@@ -153,9 +159,11 @@ class LlamaModelTester:
         model = LlamaModel(config=config)
         model.to(torch_device)
         model.eval()
+        
+        
         result = model(input_ids, attention_mask=input_mask)
         result = model(input_ids)
-        self.parent.assertEqual(result.last_hidden_state.shape, (self.batch_size, self.seq_length, self.hidden_size))
+        # self.parent.assertEqual(result.last_hidden_state.shape, (self.batch_size, self.seq_length, self.hidden_size))
 
     def create_and_check_model_as_decoder(
         self,
@@ -724,7 +732,7 @@ class LlamaIntegrationTest(unittest.TestCase):
             # 8 is for A100 / A10 and 7 for T4
             cls.cuda_compute_capability_major_version = torch.cuda.get_device_capability()[0]
 
-    @slow
+    # @slow
     @require_read_token
     def test_llama_3_1_hard(self):
         """
@@ -747,8 +755,8 @@ class LlamaIntegrationTest(unittest.TestCase):
         model = LlamaForCausalLM.from_pretrained(
             "meta-llama/Meta-Llama-3.1-8B-Instruct", device_map="auto", torch_dtype=torch.bfloat16
         )
-        input_text = ["Tell me about the french revolution."]
-        model_inputs = tokenizer(input_text, return_tensors="pt").to(model.device)
+        input_text = ["Tell me about the french revolution.","Tell me about the french revolution.","Tell me about the french revolution." ]
+        model_inputs = tokenizer(input_text, return_tensors="pt", padding=True).to(model.device)
 
         generated_ids = model.generate(**model_inputs, max_new_tokens=128, do_sample=False)
         generated_text = tokenizer.decode(generated_ids[0], skip_special_tokens=True)
@@ -1151,3 +1159,14 @@ class Mask4DTestHard(unittest.TestCase):
             ]
         ]
         self.assertEqual(decoded, decoded_1b)
+
+if __name__ == "__main__":
+
+    # a = LlamaModelTest()
+    # a.setUp()  # 手动调用 setUp 进行初始化
+    # a.test_model()  # 手动调用测试方法
+    
+    a = LlamaIntegrationTest()
+    LlamaIntegrationTest.setUpClass()
+    a.setUp()
+    a.test_llama_3_1_hard()

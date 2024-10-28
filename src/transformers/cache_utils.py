@@ -459,7 +459,19 @@ class DynamicCache(Cache):
         )
         layer_seq_length = self.key_cache[layer_idx].shape[-2] if not is_empty_layer else 0
         return layer_seq_length
-
+    
+    def get_kv_cache_memory_usage(self) -> int:
+        """Returns the memoty usage of the kvcached states."""
+        # TODO: deprecate this function in favor of `cache_position`
+        total_memory = 0
+        for tensor in self.key_cache:
+            total_memory += tensor.element_size() * tensor.nelement()
+        for tensor in self.value_cache:
+            total_memory += tensor.element_size() * tensor.nelement()  
+        # 转换为 GB
+        total_memory_MB = total_memory / (1024 ** 3)
+        return total_memory_MB
+    
     def get_max_cache_shape(self) -> Optional[int]:
         """Returns the maximum sequence length of the cache object. DynamicCache does not have a maximum length."""
         return None

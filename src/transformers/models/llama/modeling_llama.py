@@ -19,7 +19,7 @@
 # limitations under the License.
 import math
 from typing import List, Optional, Tuple, Union
-
+import time
 import torch
 import torch.nn.functional as F
 import torch.utils.checkpoint
@@ -276,6 +276,7 @@ class LlamaAttention(nn.Module):
 
     def __init__(self, config: LlamaConfig, layer_idx: Optional[int] = None):
         super().__init__()
+        self.mytime = time.time()
         self.config = config
         self.layer_idx = layer_idx
         if layer_idx is None:
@@ -359,7 +360,13 @@ class LlamaAttention(nn.Module):
             # sin and cos are specific to RoPE models; cache_position needed for the static cache
             cache_kwargs = {"sin": sin, "cos": cos, "cache_position": cache_position}
             key_states, value_states = past_key_value.update(key_states, value_states, self.layer_idx, cache_kwargs)
-
+            
+        # if self.layer_idx == 0:
+        #     cache_seq_len = past_key_value.get_seq_length()
+        #     if cache_seq_len % 100 == 0:
+        #         print("cache_seq_len: ", cache_seq_len, "time: ", time.time() - self.mytime)
+        #         if cache_seq_len % 30000 == 0:
+        #             print("i am here")
         key_states = repeat_kv(key_states, self.num_key_value_groups)
         value_states = repeat_kv(value_states, self.num_key_value_groups)
         attn_weights = torch.matmul(query_states, key_states.transpose(2, 3)) / math.sqrt(self.head_dim)
@@ -1085,7 +1092,18 @@ class LlamaModel(LlamaPreTrainedModel):
                 (sequence_length, target_length), fill_value=min_dtype, dtype=dtype, device=device
             )
             if sequence_length != 1:
-                causal_mask = torch.triu(causal_mask, diagonal=1)
+                def create_causal_mask(size, device=None, dtype=None):
+                    # 创建行和列的索引
+                    row_indices = torch.arange(size, device=device).unsqueeze(0)  # 形状 (1, size)
+                    col_indices = torch.arange(size, device=device).unsqueeze(1)  # 形状 (size, 1)
+
+                    # 创建掩码：当 row_index <= col_index 时，设置为1，否则为0
+                    causal_mask = (col_indices < row_indices).to(dtype=dtype)
+                    
+                    return causal_mask
+                # causal_mask = torch.triu(causal_mask, diagonal=1)
+                causal_mask = create_causal_mask(causal_mask.shape[0],device=causal_mask.device)
+                
             causal_mask *= torch.arange(target_length, device=device) > cache_position.reshape(-1, 1)
             causal_mask = causal_mask[None, None, :, :].expand(batch_size, 1, -1, -1)
             if attention_mask is not None:
