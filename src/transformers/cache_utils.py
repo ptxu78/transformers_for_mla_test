@@ -437,17 +437,23 @@ class DynamicCache(Cache):
             # There may be skipped layers, fill them with empty lists
             for _ in range(len(self.key_cache), layer_idx):
                 self.key_cache.append([])
-                self.value_cache.append([])
+                if value_states:
+                    self.value_cache.append([])
             self.key_cache.append(key_states)
-            self.value_cache.append(value_states)
+            if value_states:
+                self.value_cache.append(value_states)
         elif len(self.key_cache[layer_idx]) == 0:  # fills previously skipped layers; checking for tensor causes errors
             self.key_cache[layer_idx] = key_states
-            self.value_cache[layer_idx] = value_states
+            if value_states:
+                self.value_cache[layer_idx] = value_states
         else:
             self.key_cache[layer_idx] = torch.cat([self.key_cache[layer_idx], key_states], dim=-2)
-            self.value_cache[layer_idx] = torch.cat([self.value_cache[layer_idx], value_states], dim=-2)
-
-        return self.key_cache[layer_idx], self.value_cache[layer_idx]
+            if value_states:
+                self.value_cache[layer_idx] = torch.cat([self.value_cache[layer_idx], value_states], dim=-2)
+        if value_states:
+            return self.key_cache[layer_idx], self.value_cache[layer_idx]
+        else:
+            return self.key_cache[layer_idx]
 
     def get_seq_length(self, layer_idx: Optional[int] = 0) -> int:
         """Returns the sequence length of the cached states. A layer index can be optionally passed."""
@@ -466,11 +472,13 @@ class DynamicCache(Cache):
         total_memory = 0
         for tensor in self.key_cache:
             total_memory += tensor.element_size() * tensor.nelement()
-        for tensor in self.value_cache:
-            total_memory += tensor.element_size() * tensor.nelement()  
+        if self.value_cache:
+            for tensor in self.value_cache:
+                if tensor:
+                    total_memory += tensor.element_size() * tensor.nelement()  
         # 转换为 GB
-        total_memory_MB = total_memory / (1024 ** 3)
-        return total_memory_MB
+        total_memory_GB = total_memory / (1024 ** 3)
+        return total_memory_GB
     
     def get_max_cache_shape(self) -> Optional[int]:
         """Returns the maximum sequence length of the cache object. DynamicCache does not have a maximum length."""

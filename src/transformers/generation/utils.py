@@ -3153,12 +3153,15 @@ class GenerationMixin:
         unfinished_sequences = torch.ones(batch_size, dtype=torch.long, device=input_ids.device)
         model_kwargs = self._get_initial_cache_position(input_ids, model_kwargs)
 
+        use_log = True
         import time
-        import datetime
-        from torch.utils.tensorboard import SummaryWriter
-        log_root_dir = "/cpfs01/user/xuhaoran/202409mla/huggingface-transformers/log/"
-        current_time = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-        writer = SummaryWriter(log_dir=log_root_dir + f"{self.model.__class__.__name__}_batch_size_{batch_size}_input_len_{input_len}_max_length_{max_length}_{current_time}", max_queue=5, flush_secs=3)
+        if use_log:
+            import datetime
+            from torch.utils.tensorboard import SummaryWriter
+            
+            log_root_dir = "/cpfs01/user/xuhaoran/202409mla/huggingface-transformers/transformers/tests/e2e_logs"
+            current_time = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+            writer = SummaryWriter(log_dir=log_root_dir + f"{self.model.__class__.__name__}_batch_size_{batch_size}_input_len_{input_len}_max_length_{max_length}_{current_time}", max_queue=5, flush_secs=3)
         
         all_start = time.time()
         step = 0
@@ -3252,14 +3255,15 @@ class GenerationMixin:
                 "memory_allocated": allocated_memory_gb,
                 "memory_reserved": reserved_memory_gb
             }
-            
-            for key, value in infos.items():
-                if isinstance(value, (int, float)):
-                    writer.add_scalar(f"Metrics/{key}", value, step)
-            
-            if cur_len % 64 == 0:
-                print("cache_seq_len: ", cur_len, "time: ", duration_until_now)
-        writer.close()
+            if use_log:
+                for key, value in infos.items():
+                    if isinstance(value, (int, float)):
+                        writer.add_scalar(f"Metrics/{key}", value, step)
+                
+                if cur_len % 64 == 0:
+                    print("cache_seq_len: ", cur_len, "time: ", duration_until_now)
+        if use_log:
+            writer.close()
         
         if streamer is not None:
             streamer.end()

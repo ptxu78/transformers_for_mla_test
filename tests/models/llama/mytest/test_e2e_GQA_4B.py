@@ -13,12 +13,25 @@ print(f"Using device: {device}")
 
 
 def run_test(batch_size, input_len, output_len):
-    # 模型准备
-    model = LlamaForCausalLM.from_pretrained(
-        "meta-llama/Meta-Llama-3.1-8B-Instruct", device_map=device, torch_dtype=torch.bfloat16
-    )
-    # 模型调整
 
+    # 模型调整
+    local_model_dir = "./local_models/meta-llama"
+
+    config = AutoConfig.from_pretrained(
+        "meta-llama/Meta-Llama-3.1-8B-Instruct",
+        torch_dtype=torch.bfloat16,
+        cache_dir=local_model_dir,
+    )
+
+    config.hidden_size = 2560
+    config.num_hidden_layers = 62
+    config.num_attention_heads = 40
+    config.num_key_value_heads = 10
+    config.intermediate_size = 6400
+    config.head_dim = config.hidden_size // config.num_attention_heads
+
+    model = LlamaForCausalLM(config).to("cuda")
+    
     # 输入准备 真实
     # tokenizer = AutoTokenizer.from_pretrained("meta-llama/Meta-Llama-3.1-8B-Instruct")
     # input_text = ["Tell me about the french revolution."] * batch_size
