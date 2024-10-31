@@ -13,6 +13,9 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 -->
+pity's tips:
+1. Just use "/transformers/tests/models/llama/mytest/test_e2e_*.py" to run e2e test. When testing MLA, you have to choose one certain realization of MLA, which in "/transformers/src/transformers/models/minicpm/modeling_minicpm_ori.py"
+2. Wanna use logs? You just need to set model.generate(..., use_log=False). The log generation logic is in "/transformers/src/transformers/generation/utils.py Line 3156", and logs will be generated in "transformers/tests/e2e_logs"
 
 <p align="center">
   <picture>

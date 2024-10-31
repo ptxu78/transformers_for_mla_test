@@ -1,7 +1,7 @@
 import torch
 import time
 from transformers.models.minicpm.configuration_minicpm import MiniCPM3Config
-from transformers.models.minicpm.modeling_minicpm import MiniCPM3ForCausalLM
+from transformers.models.minicpm.modeling_minicpm_ori import MiniCPM3ForCausalLM
 from transformers import DynamicCache
 from transformers import AutoTokenizer
 # from transformers import pipeline
@@ -35,7 +35,7 @@ def run_test(batch_size, input_len, output_len):
     model_inputs['input_ids'] = torch.randint(0, config.vocab_size, (batch_size, input_len)).cuda()
     model_inputs['attention_mask'] = torch.ones((batch_size, input_len)).cuda()
     
-    generated_ids = model.generate(**model_inputs, max_new_tokens=output_len, do_sample=False)
+    generated_ids = model.generate(**model_inputs, max_new_tokens=output_len, do_sample=False, use_log=False)
     print("generated_ids:", generated_ids)
     
     
@@ -43,4 +43,4 @@ def run_test(batch_size, input_len, output_len):
 # Use a pipeline as a high-level helper
 
 # run_test(batch_size=1, input_len=16, output_len=128)
-run_test(batch_size=128, input_len=128, output_len=32000)
+run_test(batch_size=128, input_len=37, output_len=32000)

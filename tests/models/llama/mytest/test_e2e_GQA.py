@@ -30,7 +30,7 @@ def run_test(batch_size, input_len, output_len):
     model_inputs['input_ids'] = torch.randint(0, config.vocab_size, (batch_size, input_len)).cuda()
     model_inputs['attention_mask'] = torch.ones((batch_size, input_len)).cuda()
     
-    generated_ids = model.generate(**model_inputs, max_new_tokens=output_len, do_sample=False)   #, attn_implementation = "flash_attention_2"
+    generated_ids = model.generate(**model_inputs, max_new_tokens=output_len, do_sample=False, use_log=False)   #, attn_implementation = "flash_attention_2"
     print("generated_ids:", generated_ids)
     
 # run_test(batch_size=1024, input_len=64, output_len=2048)

@@ -1866,6 +1866,7 @@ class GenerationMixin:
         streamer: Optional["BaseStreamer"] = None,
         negative_prompt_ids: Optional[torch.Tensor] = None,
         negative_prompt_attention_mask: Optional[torch.Tensor] = None,
+        use_log: Optional[bool] = False,
         **kwargs,
     ) -> Union[GenerateOutput, torch.LongTensor]:
         r"""
@@ -2207,6 +2208,7 @@ class GenerationMixin:
                 generation_config=generation_config,
                 synced_gpus=synced_gpus,
                 streamer=streamer,
+                use_log = use_log,
                 **model_kwargs,
             )
 
@@ -3087,6 +3089,7 @@ class GenerationMixin:
         generation_config: GenerationConfig,
         synced_gpus: bool,
         streamer: Optional["BaseStreamer"],
+        use_log: Optional[bool] = False,
         **model_kwargs,
     ) -> Union[GenerateNonBeamOutput, torch.LongTensor]:
         r"""
@@ -3153,13 +3156,12 @@ class GenerationMixin:
         unfinished_sequences = torch.ones(batch_size, dtype=torch.long, device=input_ids.device)
         model_kwargs = self._get_initial_cache_position(input_ids, model_kwargs)
 
-        use_log = True
         import time
         if use_log:
             import datetime
             from torch.utils.tensorboard import SummaryWriter
-            
-            log_root_dir = "/cpfs01/user/xuhaoran/202409mla/huggingface-transformers/transformers/tests/e2e_logs"
+            from pathlib import Path
+            log_root_dir = Path(__file__).resolve().parent / "../../../tests/e2e_logs"
             current_time = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
             writer = SummaryWriter(log_dir=log_root_dir + f"{self.model.__class__.__name__}_batch_size_{batch_size}_input_len_{input_len}_max_length_{max_length}_{current_time}", max_queue=5, flush_secs=3)
         

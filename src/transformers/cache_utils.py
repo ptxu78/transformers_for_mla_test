@@ -437,20 +437,20 @@ class DynamicCache(Cache):
             # There may be skipped layers, fill them with empty lists
             for _ in range(len(self.key_cache), layer_idx):
                 self.key_cache.append([])
-                if value_states:
+                if value_states is not None:
                     self.value_cache.append([])
             self.key_cache.append(key_states)
-            if value_states:
+            if value_states is not None:
                 self.value_cache.append(value_states)
         elif len(self.key_cache[layer_idx]) == 0:  # fills previously skipped layers; checking for tensor causes errors
             self.key_cache[layer_idx] = key_states
-            if value_states:
+            if value_states is not None:
                 self.value_cache[layer_idx] = value_states
         else:
             self.key_cache[layer_idx] = torch.cat([self.key_cache[layer_idx], key_states], dim=-2)
-            if value_states:
+            if value_states is not None:
                 self.value_cache[layer_idx] = torch.cat([self.value_cache[layer_idx], value_states], dim=-2)
-        if value_states:
+        if value_states is not None:
             return self.key_cache[layer_idx], self.value_cache[layer_idx]
         else:
             return self.key_cache[layer_idx]
@@ -472,9 +472,9 @@ class DynamicCache(Cache):
         total_memory = 0
         for tensor in self.key_cache:
             total_memory += tensor.element_size() * tensor.nelement()
-        if self.value_cache:
+        if self.value_cache is not None:
             for tensor in self.value_cache:
-                if tensor:
+                if tensor is not None:
                     total_memory += tensor.element_size() * tensor.nelement()  
         # 转换为 GB
         total_memory_GB = total_memory / (1024 ** 3)
