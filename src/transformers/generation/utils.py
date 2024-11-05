@@ -3163,7 +3163,7 @@ class GenerationMixin:
             from pathlib import Path
             log_root_dir = Path(__file__).resolve().parent / "../../../tests/e2e_logs"
             current_time = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-            writer = SummaryWriter(log_dir=log_root_dir + f"{self.model.__class__.__name__}_batch_size_{batch_size}_input_len_{input_len}_max_length_{max_length}_{current_time}", max_queue=5, flush_secs=3)
+            writer = SummaryWriter(log_dir=log_root_dir / f"{self.model.__class__.__name__}_batch_size_{batch_size}_input_len_{input_len}_max_length_{max_length}_{current_time}", max_queue=5, flush_secs=3)
         
         all_start = time.time()
         step = 0
